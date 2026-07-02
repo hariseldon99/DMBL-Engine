@@ -4,7 +4,7 @@
 #PBS -N lipkin_cav
 # queue select
 #PBS -q workq
-#PBS -l select=1:ncpus=24:mpiprocs=24
+#PBS -l select=1:ncpus=24:mpiprocs=24:host=kuhpcgn1
 # Name of stdout output file (default)
 #PBS -o lipkin_cav.out 
 # stdout output file
