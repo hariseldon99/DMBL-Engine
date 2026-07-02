@@ -28,6 +28,11 @@ cd $PBS_O_WORKDIR
 #Load basic OHPC tools
 module load ohpc
 
+# Activate conda environment
+CONDA_ENV=hpc
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate "$CONDA_ENV"
+
 PYFILE=$PBS_O_WORKDIR/Codes/lipkin_cavity_popstd.py
 
 echo "Starting"
