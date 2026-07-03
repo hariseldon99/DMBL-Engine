@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import multiprocessing
 import os
 
@@ -64,38 +63,10 @@ def cavity_population_std(task):
     return N_spin, n_t.std()
 
 
-def detect_effective_cpus():
-    """Return scheduler/cpuset-aware CPU count for multiprocessing."""
-    pbs_ncpus_raw = os.environ.get('PBS_NCPUS')
-
-    pbs_ncpus = None
-    if pbs_ncpus_raw is not None:
-        try:
-            pbs_ncpus = int(pbs_ncpus_raw)
-        except ValueError:
-            pbs_ncpus = None
-
-    affinity_cpus = None
-    if hasattr(os, 'sched_getaffinity'):
-        affinity_cpus = len(os.sched_getaffinity(0))
-
-    local_cpus = multiprocessing.cpu_count()
-
-    # Prefer affinity when available because it reflects cpuset/container limits.
-    effective_cpus = affinity_cpus or pbs_ncpus or local_cpus
-
-    return {
-        'pbs_ncpus': pbs_ncpus,
-        'affinity_cpus': affinity_cpus,
-        'local_cpus': local_cpus,
-        'effective_cpus': effective_cpus,
-    }
-
-
 # ---------------------------------------------------------------------
 # Sweep settings: chaotic regime, fixed cavity truncation
 # ---------------------------------------------------------------------
-N_ph = 15
+N_spin = 400
 J = 1.0
 omega_0 = 1.0
 g = 0.10
@@ -106,26 +77,17 @@ dt = 0.05
 Omega_sweep = 0.7
 h0_sweep = jn_zeros(0, 5)[1] * Omega_sweep / 2
 
-N_values = np.arange(10, 201, 10)
+N_values = np.arange(2, 401, 100)
 tasks = [
     (N_spin, N_ph, J, omega_0, g, h0_sweep, Omega_sweep, T_total, dt)
-    for N_spin in N_values
+    for N_ph in N_values
 ]
 
 # Use multiprocessing Pool to parallelize the sweep.
-cpu_info = detect_effective_cpus()
-pool_workers = min(len(tasks), cpu_info['effective_cpus'])
-
-print(
-    'CPU diagnostics: '
-    f"PBS_NCPUS={cpu_info['pbs_ncpus']}, "
-    f"affinity={cpu_info['affinity_cpus']}, "
-    f"local_cpu_count={cpu_info['local_cpus']}, "
-    f"pool_workers={pool_workers}"
-)
-
+# Check PBS_NCPUS environment variable for HPC; otherwise use local CPU count
+n_cpus = int(os.environ.get('PBS_NCPUS', multiprocessing.cpu_count()))
 ctx = multiprocessing.get_context('fork')
-with ctx.Pool(processes=pool_workers) as pool:
+with ctx.Pool(processes=min(len(tasks), n_cpus)) as pool:
     std_results = list(
         tqdm(
             pool.imap_unordered(cavity_population_std, tasks),
@@ -143,7 +105,7 @@ np.savez_compressed(
     checkpoint_file,
     N_out=N_out,
     std_n=std_n,
-    N_ph=N_ph,
+    N_spin=N_spin,
     J=J,
     omega_0=omega_0,
     g=g,
@@ -154,4 +116,4 @@ np.savez_compressed(
 )
 
 print(f'Saved sweep checkpoint to {checkpoint_file}')
-print(f'Used {pool_workers} worker process(es) for parallel sweep')
+print(f'Used {n_cpus} CPU(s) for parallel sweep')
