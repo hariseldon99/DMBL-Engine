@@ -77,7 +77,7 @@ dt = 0.05
 Omega_sweep = 0.7
 h0_sweep = jn_zeros(0, 5)[1] * Omega_sweep / 2
 
-N_values = np.arange(2, 401, 100)
+N_values = np.arange(2, 401, 32)
 tasks = [
     (N_spin, N_ph, J, omega_0, g, h0_sweep, Omega_sweep, T_total, dt)
     for N_ph in N_values

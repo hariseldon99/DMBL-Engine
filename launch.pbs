@@ -4,12 +4,12 @@
 #PBS -N lipkin_cav
 # queue select
 #PBS -q workq
-#PBS -l select=1:ncpus=24:mpiprocs=24:host=kuhpcgn2
+#PBS -l select=1:ncpus=24:mpiprocs=24:host=kuhpccn4
 # Name of stdout output file (default)
 #PBS -o lipkin_cav.out 
 # stdout output file
 #PBS -j oe
-#PBS -l walltime=96:00:00 
+#PBS -l walltime=120:00:00 
 #----------------------------------------------------------
 
 set -euo pipefail
