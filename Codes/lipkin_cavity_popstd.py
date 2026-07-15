@@ -60,7 +60,7 @@ def cavity_population_std(task):
     )
 
     n_t = np.asarray(res.expect[0])
-    return N_spin, n_t.std()
+    return N_ph, n_t.std()
 
 
 # ---------------------------------------------------------------------
