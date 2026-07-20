@@ -69,7 +69,7 @@ def cavity_population_std(task):
 N_spin = 400
 J = 1.0
 omega_0 = 1.0
-g = 0.10
+g = 1.0
 T_total = 3000.0
 dt = 0.05
 
@@ -100,7 +100,7 @@ std_results.sort(key=lambda item: item[0])
 N_out = np.array([item[0] for item in std_results])
 std_n = np.array([item[1] for item in std_results])
 
-checkpoint_file = 'cavity_population_sweep_checkpoint.npz'
+checkpoint_file = 'cavity_population_sweep_checkpoint_high_g.npz'
 np.savez_compressed(
     checkpoint_file,
     N_out=N_out,
