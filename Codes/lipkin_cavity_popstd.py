@@ -77,7 +77,20 @@ dt = 0.05
 Omega_sweep = 0.7
 h0_sweep = jn_zeros(0, 5)[1] * Omega_sweep / 2
 
-N_values = np.arange(2, 401, 32)
+
+#N_values = np.arange(2, 101, 32)
+#iter = 0
+
+#N_values = np.arange(101, 201, 32)
+#iter = 1
+
+#N_values = np.arange(201, 301, 32)
+#iter = 2
+
+#N_values = np.arange(301, 401, 32)
+#iter = 3
+
+
 tasks = [
     (N_spin, N_ph, J, omega_0, g, h0_sweep, Omega_sweep, T_total, dt)
     for N_ph in N_values
@@ -100,7 +113,7 @@ std_results.sort(key=lambda item: item[0])
 N_out = np.array([item[0] for item in std_results])
 std_n = np.array([item[1] for item in std_results])
 
-checkpoint_file = 'cavity_population_sweep_checkpoint_high_g.npz'
+checkpoint_file = f'cavity_population_sweep_checkpoint_high_g_{iter}.npz'
 np.savez_compressed(
     checkpoint_file,
     N_out=N_out,
