@@ -22,6 +22,9 @@ size = comm.Get_size()
 # ---------------------------------------------------------------------
 def build_ops(N, N_ph, J, omega_0, g):
     """Build operators for the LMG-cavity system."""
+    N_ph = int(N_ph)  # Cast to standard Python int for QuTiP
+    N = int(N)        # Ensure N is also an int
+
     S = N / 2.0
     dim_spin = int(2 * S + 1)
 
