@@ -28,7 +28,7 @@ cd "$PBS_O_WORKDIR"
 
 # Load system OpenHPC & OpenMPI modules
 module load ohpc
-module load openmpi3   # Make sure system openmpi module is loaded
+#module load openmpi3   
 
 # Activate Conda environment
 CONDA_ENV=hpc
@@ -46,7 +46,7 @@ echo "Starting job on $PBS_NCPUS cores across allocated nodes..."
 echo '---------------------------------------------'
 
 # Run with mpiexec using OpenMPI parameters
-mpiexec -n "$PBS_NCPUS" \
+mpirun -n "$PBS_NCPUS" \
     --mca pnet ^opa \
     --mca oob ^ud \
     python -u "$PYFILE" --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
