@@ -1,10 +1,20 @@
-import multiprocessing
-import os
+#!/usr/bin/env python3
+import warnings
 
+# Suppress all warnings before any other modules are imported
+warnings.filterwarnings('ignore')
+
+import argparse
 import numpy as np
+from mpi4py import MPI
 from qutip import basis, destroy, jmat, mesolve, qeye, tensor
 from scipy.special import jn_zeros
 from tqdm.auto import tqdm
+
+# Initialize MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
 
 
 # ---------------------------------------------------------------------
@@ -64,69 +74,101 @@ def cavity_population_std(task):
 
 
 # ---------------------------------------------------------------------
-# Sweep settings: chaotic regime, fixed cavity truncation
+# Argument Parsing & Task Construction
 # ---------------------------------------------------------------------
-N_spin = 400
-J = 1.0
-omega_0 = 1.0
-g = 1.0
-T_total = 3000.0
-dt = 0.05
-
-# Keep the cavity-driving parameters in the chaotic regime.
-Omega_sweep = 0.7
-h0_sweep = jn_zeros(0, 5)[1] * Omega_sweep / 2
-
-
-#N_values = np.arange(2, 101, 32)
-#iter = 0
-
-#N_values = np.arange(101, 201, 32)
-#iter = 1
-
-#N_values = np.arange(201, 301, 32)
-#iter = 2
-
-#N_values = np.arange(301, 401, 32)
-#iter = 3
-
-
-tasks = [
-    (N_spin, N_ph, J, omega_0, g, h0_sweep, Omega_sweep, T_total, dt)
-    for N_ph in N_values
-]
-
-# Use multiprocessing Pool to parallelize the sweep.
-# Check PBS_NCPUS environment variable for HPC; otherwise use local CPU count
-n_cpus = int(os.environ.get('PBS_NCPUS', multiprocessing.cpu_count()))
-ctx = multiprocessing.get_context('fork')
-with ctx.Pool(processes=min(len(tasks), n_cpus)) as pool:
-    std_results = list(
-        tqdm(
-            pool.imap_unordered(cavity_population_std, tasks),
-            total=len(tasks),
-            desc='Sweeping N',
-        )
+if rank == 0:
+    parser = argparse.ArgumentParser(
+        description='MPI LMG-Cavity System Parameter Sweep'
+    )
+    parser.add_argument('--N_spin', type=int, default=400, help='Spin size')
+    parser.add_argument('--J', type=float, default=1.0, help='J parameter')
+    parser.add_argument('--omega_0', type=float, default=1.0, help='Cavity frequency omega_0')
+    parser.add_argument('--g', type=float, default=1.0, help='Coupling strength g')
+    parser.add_argument('--T_total', type=float, default=3000.0, help='Total time')
+    parser.add_argument('--dt', type=float, default=0.05, help='Time step')
+    parser.add_argument('--Omega_sweep', type=float, default=0.7, help='Drive frequency Omega')
+    parser.add_argument('--N_min', type=int, default=2, help='Min N_ph value')
+    parser.add_argument('--N_max', type=int, default=400, help='Max N_ph value')
+    parser.add_argument('--N_step', type=int, default=32, help='Step size for N_ph sweep')
+    parser.add_argument(
+        '--output',
+        type=str,
+        default='cavity_population_sweep_checkpoint.npz',
+        help='Output filename',
     )
 
-std_results.sort(key=lambda item: item[0])
-N_out = np.array([item[0] for item in std_results])
-std_n = np.array([item[1] for item in std_results])
+    args = parser.parse_args()
 
-checkpoint_file = f'cavity_population_sweep_checkpoint_high_g_{iter}.npz'
-np.savez_compressed(
-    checkpoint_file,
-    N_out=N_out,
-    std_n=std_n,
-    N_spin=N_spin,
-    J=J,
-    omega_0=omega_0,
-    g=g,
-    Omega_sweep=Omega_sweep,
-    h0_sweep=h0_sweep,
-    T_total=T_total,
-    dt=dt,
-)
+    # Derived parameter
+    h0_sweep = jn_zeros(0, 5)[1] * args.Omega_sweep / 2
 
-print(f'Saved sweep checkpoint to {checkpoint_file}')
-print(f'Used {n_cpus} CPU(s) for parallel sweep')
+    N_values = np.arange(args.N_min, args.N_max, args.N_step)
+    tasks = [
+        (
+            args.N_spin,
+            N_ph,
+            args.J,
+            args.omega_0,
+            args.g,
+            h0_sweep,
+            args.Omega_sweep,
+            args.T_total,
+            args.dt,
+        )
+        for N_ph in N_values
+    ]
+
+    # Chunk tasks for scatter among available MPI ranks
+    task_chunks = np.array_split(tasks, size)
+    task_chunks = [list(chunk) for chunk in task_chunks]
+    
+    # Store settings dictionary to pass for saving
+    run_params = vars(args)
+    run_params['h0_sweep'] = h0_sweep
+else:
+    task_chunks = None
+    run_params = None
+
+# Distribute chunks to ranks via Scatter
+local_tasks = comm.scatter(task_chunks, root=0)
+
+# Process local tasks assigned to this rank
+local_results = []
+if rank == 0:
+    for task in tqdm(local_tasks, desc='Rank 0 progress'):
+        local_results.append(cavity_population_std(task))
+else:
+    for task in local_tasks:
+        local_results.append(cavity_population_std(task))
+
+# Collect results from all processes back to rank 0
+all_results = comm.gather(local_results, root=0)
+
+# ---------------------------------------------------------------------
+# Save output (Rank 0 only)
+# ---------------------------------------------------------------------
+if rank == 0:
+    # Flatten the gathered list of lists
+    std_results = [item for sublist in all_results for item in sublist]
+
+    std_results.sort(key=lambda item: item[0])
+    N_out = np.array([item[0] for item in std_results])
+    std_n = np.array([item[1] for item in std_results])
+
+    checkpoint_file = run_params['output']
+    np.savez_compressed(
+        checkpoint_file,
+        N_out=N_out,
+        std_n=std_n,
+        N_spin=run_params['N_spin'],
+        J=run_params['J'],
+        omega_0=run_params['omega_0'],
+        g=run_params['g'],
+        Omega_sweep=run_params['Omega_sweep'],
+        h0_sweep=run_params['h0_sweep'],
+        T_total=run_params['T_total'],
+        dt=run_params['dt'],
+    )
+
+    print(f'Saved sweep checkpoint to {checkpoint_file}')
+    print(f'Completed execution using {size} MPI process(es).') 

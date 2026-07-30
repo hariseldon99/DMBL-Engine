@@ -4,14 +4,16 @@
 #PBS -N lipkin_cav
 # queue select
 #PBS -q workq
-#PBS -l select=1:ncpus=24:mpiprocs=24:host=kuhpcgn1
-#PBS -l place=excl
+#PBS -l select=4:ncpus=24:mpiprocs=24
+#PBS -l place=scatter:excl
 # Name of stdout output file (default)
 #PBS -o lipkin_cav.out 
 # stdout output file
 #PBS -j oe
-#PBS -l walltime=120:00:00 
+#PBS -l walltime=360:00:00 
 #----------------------------------------------------------
+
+export OMP_NUM_THREADS=1
 
 set -euo pipefail
 export PYTHONWARNINGS="ignore::SyntaxWarning"
@@ -40,7 +42,7 @@ echo "Starting"
 echo "PBS_NCPUS = ${PBS_NCPUS}"
 echo '---------------------------------------------'
 
-python "$PYFILE"
+mpiexec python $PYFILE --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
 
 #End time
 end=`date +%s.%N`
