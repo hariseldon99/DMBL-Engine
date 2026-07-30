@@ -2,56 +2,62 @@
 #----------------------------------------------------------
 # Job name
 #PBS -N lipkin_cav
-# queue select
 #PBS -q workq
-#PBS -l select=4:ncpus=24:mpiprocs=24
-#PBS -l place=scatter:excl
-# Name of stdout output file (default)
+#PBS -l select=4:ncpus=8:mpiprocs=8
 #PBS -o lipkin_cav.out 
-# stdout output file
 #PBS -j oe
 #PBS -l walltime=360:00:00 
 #----------------------------------------------------------
 
-export OMP_NUM_THREADS=1
-
 set -euo pipefail
-export PYTHONWARNINGS="ignore::SyntaxWarning"
 
-# PBS_NCPUS is not guaranteed to be set by all schedulers.
-# Derive it from PBS_NODEFILE, which lists one entry per allocated CPU slot.
-export PBS_NCPUS=$(wc -l < "$PBS_NODEFILE")
-export OMP_NUM_THREADS=1      # let Python multiprocessing own the cores
+# Prevents inner-thread spawning (OpenBLAS/MKL) from fighting for cores
+export OMP_NUM_THREADS=1
+export PYTHONWARNINGS="ignore"
 
-#Start time
-start=`date +%s.%N`
+# Suppress harmless OpenMPI MCA component load warnings
+export MCA_param_files=/dev/null
+export OMPI_MCA_pnet=^opa
+export OMPI_MCA_oob=^ud
+
+# Start timer
+start=$(date +%s.%N)
+
 # Change to submission directory
-cd $PBS_O_WORKDIR
+cd "$PBS_O_WORKDIR"
 
-#Load basic OHPC tools
+# Load system OpenHPC & OpenMPI modules
 module load ohpc
+module load openmpi3   # Make sure system openmpi module is loaded
 
-# Activate conda environment
+# Activate Conda environment
 CONDA_ENV=hpc
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate "$CONDA_ENV"
 
-PYFILE=$PBS_O_WORKDIR/Codes/lipkin_cavity_popstd.py
+# Ensure PATH uses the Conda binaries first
+export PATH="$CONDA_PREFIX/bin:$PATH"
 
-echo "Starting"
-echo "PBS_NCPUS = ${PBS_NCPUS}"
+PYFILE="$PBS_O_WORKDIR/Codes/lipkin_cavity_popstd.py"
+
+PBS_NCPUS=$(wc -l < "$PBS_NODEFILE")
+
+echo "Starting job on $PBS_NCPUS cores across allocated nodes..."
 echo '---------------------------------------------'
 
-mpiexec python $PYFILE --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
+# Run with mpiexec using OpenMPI parameters
+mpiexec -n "$PBS_NCPUS" \
+    --mca pnet ^opa \
+    --mca oob ^ud \
+    python -u "$PYFILE" --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
 
-#End time
-end=`date +%s.%N`
+# End timer
+end=$(date +%s.%N)
 
-echo "NUM_CPUS= ${PBS_NCPUS}"
-RUNTIME=$( echo "$end - $start" | bc -l )
+RUNTIME=$(echo "$end - $start" | bc -l)
 
 echo '---------------------------------------------'
-echo "Runtime: "$RUNTIME" sec"
+echo "Completed in: $RUNTIME sec"
 echo '---------------------------------------------'
 
 # Define login node
