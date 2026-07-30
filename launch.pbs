@@ -47,8 +47,6 @@ echo '---------------------------------------------'
 
 # Run with mpiexec using OpenMPI parameters
 mpirun -n "$PBS_NCPUS" \
-    --mca pnet ^opa \
-    --mca oob ^ud \
     python -u "$PYFILE" --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
 
 # End timer
