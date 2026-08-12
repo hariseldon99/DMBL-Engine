@@ -47,7 +47,7 @@ echo '---------------------------------------------'
 
 # Run with mpiexec using OpenMPI parameters
 mpirun -n "$PBS_NCPUS" \
-    python -u "$PYFILE" --g 0.001 --output cavity_population_sweep_checkpoint_lowlowg.npz
+    python -u "$PYFILE" --g 1.0 --output cavity_population_sweep_checkpoint_high_20260803.npz
 
 # End timer
 end=$(date +%s.%N)
