@@ -97,6 +97,43 @@ To design a functional quantum engine operating on a driven LMG bath:
    $$H_{\text{bath}}(t) = -\frac{J}{N} S_z^2 + h_1 \cos(\Omega_1 t) S_x + h_2 \cos(\Omega_2 t) S_y$$
    This generates strong hyper-chaos within the $S=N/2$ manifold ($\text{dim} = N+1$), allowing exact large-spin simulations ($N=400$) that successfully thermalize an attached quantum piston.
 
+### Classical Limit ($N \to \infty$) Semiclassical Hamiltonian (Sciolla-Biroli & Mori Formalism)
+
+Following the canonical phase-space formulation of the LMG model in **Sciolla and Biroli** ([PRL 105, 220401 (2010)](https://doi.org/10.1103/PhysRevLett.105.220401); *J. Stat. Mech.* P09016 (2011)) and **Mori** ([J. Phys. A: Math. Theor. 52 054001 (2019)](https://doi.org/10.1088/1751-8121/aaf9db)), the thermodynamic limit $N \to \infty$ ($\hbar_{\text{eff}} \sim 1/N \to 0$) of collective spin systems is mapped onto a classical Hamiltonian phase space of intensive observables.
+
+#### 1. Canonical Action-Angle / Phase-Space Mapping $(z, \phi)$
+We define the normalized collective magnetization $z = \frac{2 S_z}{N} \in [-1, 1]$ as the canonical momentum and the azimuthal angle $\phi \in [0, 2\pi)$ as the conjugate canonical coordinate, obeying the fundamental Poisson bracket:
+$$\{ \phi, z \} = 1$$
+
+The normalized spin vector components $\mathbf{m} = \frac{2\mathbf{S}}{N}$ on the unit sphere $S^2$ ($m_x^2 + m_y^2 + m_z^2 = 1$) are parameterized as:
+$$m_z = z$$
+$$m_x = \sqrt{1 - z^2} \cos\phi$$
+$$m_y = \sqrt{1 - z^2} \sin\phi$$
+
+#### 2. Holstein-Primakoff Quadrature Mapping $(q, p)$
+Alternatively, following Mori (2019), using the Holstein-Primakoff transformation $S_+ = a^\dagger \sqrt{N - a^\dagger a}$, $S_- = \sqrt{N - a^\dagger a} \, a$, and defining canonical position and momentum quadratures $q = \frac{a + a^\dagger}{\sqrt{2N}}$, $p = \frac{-i(a - a^\dagger)}{\sqrt{2N}}$ (with $\{q, p\} = 1$):
+$$m_z = q^2 + p^2 - 1, \quad m_x = q \sqrt{2 - (q^2 + p^2)}, \quad m_y = p \sqrt{2 - (q^2 + p^2)}$$
+
+#### 3. Bi-Chromatically Driven Classical Hamiltonian $\mathcal{H}_{\text{cl}}$
+Substituting the $(z, \phi)$ canonical mapping into $H_{\text{bath}}(t) = -\frac{J}{N} S_z^2 + h_1 \cos(\Omega_1 t) S_x + h_2 \cos(\Omega_2 t) S_y$, the intensive classical Hamiltonian per spin $\mathcal{H}_{\text{cl}}(z, \phi, t) = \lim_{N \to \infty} \frac{H_{\text{bath}}(t)}{N}$ becomes:
+
+$$\mathcal{H}_{\text{cl}}(z, \phi, t) = -\frac{J}{4} z^2 + \frac{\sqrt{1 - z^2}}{2} \left[ h_1 \cos(\Omega_1 t) \cos\phi + h_2 \cos(\Omega_2 t) \sin\phi \right]$$
+
+In Holstein-Primakoff quadratures $(q, p)$:
+$$\mathcal{H}_{\text{cl}}(q, p, t) = -\frac{J}{4} (q^2 + p^2 - 1)^2 + \frac{\sqrt{2 - (q^2 + p^2)}}{2} \left[ h_1 \cos(\Omega_1 t) \, q + h_2 \cos(\Omega_2 t) \, p \right]$$
+
+#### 4. Canonical Hamilton's Equations of Motion
+In the Sciolla-Biroli canonical variables $(z, \phi)$, Hamilton's equations $\dot{\phi} = \frac{\partial \mathcal{H}_{\text{cl}}}{\partial z}$ and $\dot{z} = -\frac{\partial \mathcal{H}_{\text{cl}}}{\partial \phi}$ yield the non-linear equations of motion:
+
+$$\dot{\phi} = -\frac{J}{2} z - \frac{z}{2 \sqrt{1 - z^2}} \left[ h_1 \cos(\Omega_1 t) \cos\phi + h_2 \cos(\Omega_2 t) \sin\phi \right]$$
+
+$$\dot{z} = \frac{\sqrt{1 - z^2}}{2} \left[ h_1 \cos(\Omega_1 t) \sin\phi - h_2 \cos(\Omega_2 t) \cos\phi \right]$$
+
+#### 5. Physical Mechanism & Chaos Generation
+* **Un-driven Limit ($h_1 = h_2 = 0$):** $\mathcal{H}_{\text{cl}} = -J z^2 / 4$, rendering $z(t) = z_0$ a conservation law with linear precession $\phi(t) = \phi_0 - (J z_0 / 2) t$.
+* **Single-Drive Limit ($h_2 = 0$):** As analyzed in Sciolla & Biroli (2010), the term $\sqrt{1-z^2}\cos\phi$ creates separatrix boundaries and Dynamical Phase Transitions (DPT) across critical energy surfaces $E_c$.
+* **Bi-Chromatic Quasi-Periodic Drive ($h_1 \neq 0, h_2 \neq 0, \frac{\Omega_2}{\Omega_1} \notin \mathbb{Q}$):** The non-linear drive terms proportional to $\cos\phi$ and $\sin\phi$ oscillating at incommensurate frequencies $\Omega_1, \Omega_2$ cause overlapping quasi-periodic resonances. This completely destroys regular KAM stability tori and separatrix barriers throughout the compact phase space $z \in [-1, 1]$, generating global phase-space hyper-chaos that underpins Floquet-ETH thermalization of the piston.
+
 ---
 
 ## 6. Implementation Script & Empirical Simulation Results
